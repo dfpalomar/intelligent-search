@@ -23,7 +23,6 @@ app.post("/intelligent-search", async (req, res) => {
     const userEmbeddingTensor = await model(userQuestion);
     const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
 
-    var cont = 0;
     const similarities = await Promise.all(
       qaData.flatMap(
         async (topic) =>
@@ -44,13 +43,15 @@ app.post("/intelligent-search", async (req, res) => {
           )
       )
     );
+    
+     // Flatten the array of similarities and filter by threshold
+    const threshold = 0.15; // Start with a moderate threshold
+    const filteredSimilarities = similarities.flat().filter(article => article.similarity > threshold);
 
-    // Sort by similarity score
-    const flattenedSimilarities = similarities.flat();
-    flattenedSimilarities.sort((a, b) => b.similarity - a.similarity);
+    filteredSimilarities.sort((a, b) => b.similarity - a.similarity);
 
-    // Send the top 5 most similar articles
-    res.send(flattenedSimilarities.slice(0, 5));
+    const maxNumArticles = 5;
+    res.send(filteredSimilarities.slice(0, maxNumArticles));
 
   } catch (error) {
     console.error("Error loading transformer module:", error);
