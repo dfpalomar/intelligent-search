@@ -18,9 +18,8 @@ app.post("/intelligent-search", async (req, res) => {
 
     const userQuestion = req.body.question;
 
-    const qaData: Topic[] = await readJSONFile("./FAQ.json");
+    const qaData: Topic[] = await readJSONFile("./FAQ_cleaned.json");
 
-    // Get the embeddings for the user question
     const userEmbeddingTensor = await model(userQuestion);
     const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
 
@@ -30,9 +29,8 @@ app.post("/intelligent-search", async (req, res) => {
         async (topic) =>
           await Promise.all(
             topic.articles.map(async (article) => {
-              console.log("cont = ", ++cont);
-              // const articleEmbeddingTensor = await model(article.title);
-              const articleEmbeddingTensor = await model(article.body);
+              const articleQA = `${article.title} ${article.body}`;
+              const articleEmbeddingTensor = await model(articleQA);
               const articleEmbeddingArray: number[] = Array.from(articleEmbeddingTensor.data);
               return {
                 title: article.title,
@@ -51,8 +49,8 @@ app.post("/intelligent-search", async (req, res) => {
     const flattenedSimilarities = similarities.flat();
     flattenedSimilarities.sort((a, b) => b.similarity - a.similarity);
 
-    // Send the top 3 most similar articles
-    res.send(flattenedSimilarities.slice(0, 3));
+    // Send the top 5 most similar articles
+    res.send(flattenedSimilarities.slice(0, 5));
 
   } catch (error) {
     console.error("Error loading transformer module:", error);
