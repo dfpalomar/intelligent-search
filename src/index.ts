@@ -6,19 +6,33 @@ const TransformersApi = Function('return import("@xenova/transformers")')();
 const app = express();
 const port = 3000;
 
+let model: any;
+let qaData: Topic[] = [];
+
 app.use(express.json());
+
+const initializeModel = async () => {
+  const { pipeline } = await TransformersApi;
+  model = await pipeline(
+    "feature-extraction", 
+    "xenova/all-MiniLM-L6-v2"
+  );
+};
+
+const initializeData = async () => {
+  const data = await readJSONFile("./FAQ_cleaned.json");
+  if (data) {
+    qaData = data;
+  }
+};
+
+initializeModel();
+initializeData();
 
 app.post("/intelligent-search", async (req, res) => {
   try {
-    const { pipeline } = await TransformersApi;
-    const model = await pipeline(
-      "feature-extraction",
-      "xenova/all-MiniLM-L6-v2"
-    );
 
     const userQuestion = req.body.question;
-
-    const qaData: Topic[] = await readJSONFile("./FAQ_cleaned.json");
 
     const userEmbeddingTensor = await model(userQuestion);
     const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
@@ -59,15 +73,6 @@ app.post("/intelligent-search", async (req, res) => {
   }
 });
 
-app.get("/faq", (req, res) => {
-  const userQuestion = req.query.q;
-
-  if (!userQuestion) {
-    return res.status(400).json({ error: "Question is required" });
-  } else {
-    res.send("Your question is: " + userQuestion);
-  }
-});
 
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
@@ -114,8 +119,4 @@ interface Topic {
   id: number;
   name: string;
   articles: Article[];
-}
-
-interface QAData {
-  topics: Topic[];
 }
