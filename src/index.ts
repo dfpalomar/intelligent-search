@@ -8,6 +8,7 @@ const port = 3000;
 
 let model: any;
 let qaData: Topic[] = [];
+let articleEmbeddings: { [key: string]: number[] } = {};
 
 app.use(express.json());
 
@@ -20,42 +21,42 @@ const initializeModel = async () => {
 };
 
 const initializeData = async () => {
-  const data = await readJSONFile("./FAQ_cleaned.json");
-  if (data) {
-    qaData = data;
+  qaData = await readJSONFile("./FAQ_cleaned.json") || [];
+};
+
+const precomputeArticleEmbeddings = async () => {
+  for (const topic of qaData) {
+    for (const article of topic.articles) {
+      const articleQA = `${article.title} ${article.body}`;
+      const articleEmbeddingTensor = await model(articleQA);
+      articleEmbeddings[article.id] = Array.from(articleEmbeddingTensor.data);
+    }
   }
 };
 
-initializeModel();
-initializeData();
+initializeModel()
+  .then(initializeData)
+  .then(precomputeArticleEmbeddings)
+  .catch((error) => {
+    console.error("Error during initialization:", error);
+  });
 
 app.post("/intelligent-search", async (req, res) => {
   try {
 
     const userQuestion = req.body.question;
-
     const userEmbeddingTensor = await model(userQuestion);
     const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
 
-    const similarities = await Promise.all(
-      qaData.flatMap(
-        async (topic) =>
-          await Promise.all(
-            topic.articles.map(async (article) => {
-              const articleQA = `${article.title} ${article.body}`;
-              const articleEmbeddingTensor = await model(articleQA);
-              const articleEmbeddingArray: number[] = Array.from(articleEmbeddingTensor.data);
-              return {
-                title: article.title,
-                body: article.body,
-                similarity: computeCosineSimilarity(
-                  userEmbeddingArray,
-                  articleEmbeddingArray
-                ),
-              };
-            })
-          )
-      )
+    const similarities = qaData.flatMap((topic) =>
+      topic.articles.map((article) => {
+        const articleEmbeddingArray = articleEmbeddings[article.id];
+        return {
+          title: article.title,
+          body: article.body,
+          similarity: computeCosineSimilarity(userEmbeddingArray, articleEmbeddingArray),
+        };
+      })
     );
     
      // Flatten the array of similarities and filter by threshold
