@@ -14,14 +14,11 @@ app.use(express.json());
 
 const initializeModel = async () => {
   const { pipeline } = await TransformersApi;
-  model = await pipeline(
-    "feature-extraction", 
-    "xenova/all-MiniLM-L6-v2"
-  );
+  model = await pipeline("feature-extraction", "xenova/all-MiniLM-L6-v2");
 };
 
 const initializeData = async () => {
-  qaData = await readJSONFile("./FAQ_cleaned.json") || [];
+  qaData = (await readJSONFile("./FAQ.json")) || [];
 };
 
 const precomputeArticleEmbeddings = async () => {
@@ -43,7 +40,6 @@ initializeModel()
 
 app.post("/intelligent-search", async (req, res) => {
   try {
-
     const userQuestion = req.body.question;
     const userEmbeddingTensor = await model(userQuestion);
     const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
@@ -52,28 +48,33 @@ app.post("/intelligent-search", async (req, res) => {
       topic.articles.map((article) => {
         const articleEmbeddingArray = articleEmbeddings[article.id];
         return {
+          topicId: article.topicId,
+          articleId: article.id,
           title: article.title,
           body: article.body,
-          similarity: computeCosineSimilarity(userEmbeddingArray, articleEmbeddingArray),
+          similarity: computeCosineSimilarity(
+            userEmbeddingArray,
+            articleEmbeddingArray
+          ),
         };
       })
     );
-    
-     // Flatten the array of similarities and filter by threshold
+
+    // Flatten the array of similarities and filter by threshold
     const threshold = 0.15; // Start with a moderate threshold
-    const filteredSimilarities = similarities.flat().filter(article => article.similarity > threshold);
+    const filteredSimilarities = similarities
+      .flat()
+      .filter((article) => article.similarity > threshold);
 
     filteredSimilarities.sort((a, b) => b.similarity - a.similarity);
 
     const maxNumArticles = 5;
     res.send(filteredSimilarities.slice(0, maxNumArticles));
-
   } catch (error) {
     console.error("Error loading transformer module:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
