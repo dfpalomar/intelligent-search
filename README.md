@@ -24,7 +24,7 @@ The project uses the `xenova/all-MiniLM-L6-v2` model from the `@xenova/transform
 ### Prerequisites
 
 - Node.js and npm should be installed on your machine.
-- Ensure you have the FAQ JSON file (`FAQ_cleaned.json`) in the root directory.
+- Ensure you have the FAQ JSON file (`FAQ.json`) in the root directory.
 
 ### Installation
 
@@ -76,12 +76,12 @@ The project uses the `xenova/all-MiniLM-L6-v2` model from the `@xenova/transform
 ## Project Structure
 
 - `index.ts`: Main entry point of the application.
-- `FAQ_cleaned.json`: JSON file containing the FAQ data.
+- `FAQ.json`: JSON file containing the FAQ data.
 - `package.json`: Project metadata and dependencies.
 
 ## How It Works
 
 1. **Model Initialization:** The server initializes by loading the transformer model and precomputing embeddings for all FAQ articles.
-2. **Data Initialization:** FAQ data is read from `FAQ_cleaned.json` and stored in memory.
+2. **Data Initialization:** FAQ data is read from `FAQ.json` and stored in memory.
 3. **Embeddings Computation:** Precomputed embeddings for FAQ articles are used to quickly compute similarities with user queries.
 4. **Cosine Similarity:** The API computes cosine similarity between the user query embedding and each article embedding, returning the top matching articles.
