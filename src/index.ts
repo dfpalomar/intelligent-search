@@ -60,7 +60,6 @@ app.post("/intelligent-search", async (req, res) => {
       })
     );
 
-    // Flatten the array of similarities and filter by threshold
     const threshold = 0.15; // Start with a moderate threshold
     const filteredSimilarities = similarities
       .flat()
@@ -90,23 +89,14 @@ async function readJSONFile(filePath: string) {
   }
 }
 
-// Utility function to compute cosine similarity
 function computeCosineSimilarity(vecA: number[], vecB: number[]): number {
-  // Type checks
   if (!Array.isArray(vecA) || !Array.isArray(vecB)) {
     throw new TypeError("Inputs to computeCosineSimilarity must be arrays");
   }
-
-  // Compute the dot product of vecA and vecB
   const dotProduct = vecA.reduce((sum, a, idx) => sum + a * vecB[idx], 0);
-
-  // Compute the magnitude of vecA and vecB
   const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
   const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-
-  // Compute the cosine similarity
   const cosineSimilarity = dotProduct / (magnitudeA * magnitudeB);
-
   return cosineSimilarity;
 }
 
