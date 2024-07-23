@@ -14,7 +14,7 @@ app.use(express.json());
 
 const initializeModel = async () => {
   const { pipeline } = await TransformersApi;
-  model = await pipeline("feature-extraction", "xenova/all-MiniLM-L6-v2");
+  model = await pipeline("feature-extraction", "xenova/all-MiniLM-L12-v2");
 };
 
 const initializeData = async () => {
