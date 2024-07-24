@@ -6,33 +6,33 @@ const TransformersApi = Function('return import("@xenova/transformers")')();
 const app = express();
 const port = 3000;
 
-let model: any;
-let qaData: Topic[] = [];
+let llmModel: any;
+let faqData: Topic[] = [];
 let articleEmbeddings: { [key: string]: number[] } = {};
 
 app.use(express.json());
 
-const initializeModel = async () => {
+const loadLLMModel = async () => {
   const { pipeline } = await TransformersApi;
-  model = await pipeline("feature-extraction", "xenova/all-MiniLM-L12-v2");
+  llmModel = await pipeline("feature-extraction", "xenova/all-MiniLM-L12-v2");
 };
 
-const initializeData = async () => {
-  qaData = (await readJSONFile("./FAQ.json")) || [];
+const loadFAQ = async () => {
+  faqData = (await readJSONFile("./FAQ.json")) || [];
 };
 
 const precomputeArticleEmbeddings = async () => {
-  for (const topic of qaData) {
+  for (const topic of faqData) {
     for (const article of topic.articles) {
       const articleQA = `${article.title} ${article.body}`;
-      const articleEmbeddingTensor = await model(articleQA);
+      const articleEmbeddingTensor = await llmModel(articleQA);
       articleEmbeddings[article.id] = Array.from(articleEmbeddingTensor.data);
     }
   }
 };
 
-initializeModel()
-  .then(initializeData)
+loadLLMModel()
+  .then(loadFAQ)
   .then(precomputeArticleEmbeddings)
   .catch((error) => {
     console.error("Error during initialization:", error);
@@ -65,10 +65,10 @@ async function readJSONFile(filePath: string) {
 }
 
 async function performIntelligentSearch(userQuestion: string) {
-  const userEmbeddingTensor = await model(userQuestion);
+  const userEmbeddingTensor = await llmModel(userQuestion);
   const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
 
-  const similarities = qaData.flatMap((topic) =>
+  const similarities = faqData.flatMap((topic) =>
     topic.articles.map((article) => {
       const articleEmbeddingArray = articleEmbeddings[article.id];
       return {
