@@ -38,39 +38,14 @@ initializeModel()
     console.error("Error during initialization:", error);
   });
 
+  
 app.post("/intelligent-search", async (req, res) => {
   try {
     const userQuestion = req.body.question;
-    const userEmbeddingTensor = await model(userQuestion);
-    const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
-
-    const similarities = qaData.flatMap((topic) =>
-      topic.articles.map((article) => {
-        const articleEmbeddingArray = articleEmbeddings[article.id];
-        return {
-          topicId: article.topicId,
-          articleId: article.id,
-          title: article.title,
-          body: article.body,
-          similarity: computeCosineSimilarity(
-            userEmbeddingArray,
-            articleEmbeddingArray
-          ),
-        };
-      })
-    );
-
-    const threshold = 0.15; // Start with a moderate threshold
-    const filteredSimilarities = similarities
-      .flat()
-      .filter((article) => article.similarity > threshold);
-
-    filteredSimilarities.sort((a, b) => b.similarity - a.similarity);
-
-    const maxNumArticles = 5;
-    res.send(filteredSimilarities.slice(0, maxNumArticles));
+    const searchResults = await performIntelligentSearch(userQuestion);
+    res.send(searchResults);
   } catch (error) {
-    console.error("Error loading transformer module:", error);
+    console.error("Error processing intelligent search:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -87,6 +62,37 @@ async function readJSONFile(filePath: string) {
   } catch (err) {
     console.error("Error reading the JSON file:", err);
   }
+}
+
+async function performIntelligentSearch(userQuestion: string) {
+  const userEmbeddingTensor = await model(userQuestion);
+  const userEmbeddingArray: number[] = Array.from(userEmbeddingTensor.data);
+
+  const similarities = qaData.flatMap((topic) =>
+    topic.articles.map((article) => {
+      const articleEmbeddingArray = articleEmbeddings[article.id];
+      return {
+        topicId: article.topicId,
+        articleId: article.id,
+        title: article.title,
+        body: article.body,
+        similarity: computeCosineSimilarity(
+          userEmbeddingArray,
+          articleEmbeddingArray
+        ),
+      };
+    })
+  );
+
+  const threshold = 0.15;
+  const filteredSimilarities = similarities
+    .flat()
+    .filter((article) => article.similarity > threshold);
+
+  filteredSimilarities.sort((a, b) => b.similarity - a.similarity);
+
+  const maxNumArticles = 5;
+  return filteredSimilarities.slice(0, maxNumArticles);
 }
 
 function computeCosineSimilarity(vecA: number[], vecB: number[]): number {
